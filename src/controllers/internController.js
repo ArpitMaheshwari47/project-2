@@ -57,8 +57,6 @@ const createIntern = async function (req, res) {
             return res.status(400).send({ status: false, msg: "Mobile is already register" })
         };
 
-        // let collegeId=data.collegeId
-
         let collegeCheck = await collegeModel.findById({ _id:data.collegeId })
         
         if (collegeCheck) {
@@ -69,7 +67,7 @@ const createIntern = async function (req, res) {
         else{
             return res.status(400).send({ status: false, msg: "CollegeId was not found" })
         };
-        
+
     } catch (err) {
         console.log("This is the error :", err.message);
        return res.status(500).send({ msg: "Error", error: err.message });

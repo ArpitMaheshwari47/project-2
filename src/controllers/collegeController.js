@@ -61,19 +61,13 @@ const createCollege = async function (req, res) {
 // GET COLLEGE DETAILS   ===============>
 
 const getCollegeDetails = async function (req, res) {
-    
+
     try {
         let data = req.query
-
-        // console.log(data)
 
         if (Object.keys(data).length == 0) {
             return res.status(400).send({ status: false, msg: "Please provide the college details" })
          };
-
-        // let CollegeName = data.collegeName
-
-        // console.log(CollegeName)
 
         const getCollegeDetail = await collegeModel.findOne({name: data.collegeName})
 
@@ -83,41 +77,29 @@ const getCollegeDetails = async function (req, res) {
             status: false,
             message: " please provide correct college name"
         })
-
-
         const collegeId = getCollegeDetail._id
-
-        // console.log(collegeId)
-
-
         const findIntern = await internModel.find({
             collegeId: collegeId,
             isDeleted: false
         }).select({ name: 1, email: 1, mobile: 1 })
 
-        // console.log(findIntern)
- 
-
         if(findIntern.length == 0) return res.status(404).send({
             status:false,
             message :"No intern enrolled with this college" 
         })
-
-
+ 
         let finalData = {
             name: getCollegeDetail.name,
             fullName: getCollegeDetail.fullName,
             logoLink: getCollegeDetail.logoLink,
             interns: findIntern
         }
-
-        // console.log(finalData)
-
         res.status(200).send({
             status: true,
             message: "college interns details",
             data: finalData
         })
+
     }
     catch (err) {
         return res.status(500).send({ status: false, message: err.message })
