@@ -12,14 +12,14 @@ const createCollege = async function (req, res) {
          return res.status(400).send({ status: false, msg: "Please provide the college details" })
       };
       if ((!data.fullName && !data.logoLink)) {
-         return res.status(400).send({ status: false, msg: "" })
+         return res.status(400).send({ status: false, msg: "Please provide fullName and logolink" })
       };
 
        if ((!data.name && !data.fullName)) {
-          return res.status(400).send({ status: false, msg: "somthing missing2" })
+          return res.status(400).send({ status: false, msg: "Please provide name and fullName" })
        };
        if ((!data.name && !data.logoLink)) {
-          return res.status(400).send({ status: false, msg: "somthing missing3" })
+          return res.status(400).send({ status: false, msg: "Please provide name and logolink"})
        };
       //particular each required feild is mandetory
       if (!data.name) {
@@ -81,6 +81,7 @@ const createCollege = async function (req, res) {
 const getCollegeDetails = async function (req, res) {
 
    try {
+      
       let data = req.query
       //edge cases
       //this is college name is empty or not
