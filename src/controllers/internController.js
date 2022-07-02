@@ -21,8 +21,8 @@ const createIntern = async function (req, res) {
         if (!data.mobile) {
             return res.status(400).send({ status: false, msg: "Mobile is required" })
         };
-        if (!data.collegeId) {
-            return res.status(400).send({ status: false, msg: "collegeId is required" })
+        if (!data.collegeName) {
+            return res.status(400).send({ status: false, msg: "collegeName is required" })
         };
 
         // checking name in alphbet only
@@ -57,19 +57,26 @@ const createIntern = async function (req, res) {
             return res.status(400).send({ status: false, msg: "Mobile is already register" })
         };
 
-        // let collegeId=data.collegeId
+        let collegeCheck = await collegeModel.findOne({ name: data.collegeName })
+        if (!collegeCheck) {
 
-        let collegeCheck = await collegeModel.findById({ _id: data.collegeId })
-
-        if (collegeCheck) {
-
-            let college = await internModel.create(data)
-            return res.status(201).send({ status: true, data: college })
+            return res.status(400).send({ status: false, msg: "CollegeName was not found" })
         }
-        else {
-            return res.status(400).send({ status: false, msg: "CollegeId was not found" })
-        };
+       
+        let intyern = {
+            name:req.body.name,
+            email:req.body.email,
+            mobile:req.body.mobile,
+            collegeId:collegeCheck._id
+        }
 
+            let collegeintern = await internModel.create(intyern)
+            console.log(collegeintern)
+            return res.status(201).send({ 
+                status: true,
+                 data: intyern})
+                 
+        
     } catch (err) {
         console.log("This is the error :", err.message);
         return res.status(500).send({ msg: "Error", error: err.message });
@@ -79,3 +86,4 @@ const createIntern = async function (req, res) {
 
 
 module.exports.createIntern = createIntern
+

@@ -12,7 +12,7 @@ const createCollege = async function (req, res) {
          return res.status(400).send({ status: false, msg: "Please provide the college details" })
       };
       if ((!data.fullName && !data.logoLink)) {
-         return res.status(400).send({ status: false, msg: "somthing missing1" })
+         return res.status(400).send({ status: false, msg: "" })
       };
 
        if ((!data.name && !data.fullName)) {
@@ -58,7 +58,14 @@ const createCollege = async function (req, res) {
       let nameCheck = await collegeModel.findOne({ name: data.name });
       if (!nameCheck) {
          let college = await collegeModel.create(data)
-         return res.status(201).send({ status: true, data: college });
+         return res.status(201).send({ 
+            status: true,
+             data: {
+               name:college.name,
+               fullName:college.fullName,
+               logoLink:college.logoLink,
+               isDeleted:college.isDeleted
+             }});
       }
       else {
          return res.status(400).send({ status: false, msg: "Name should be unique" });
