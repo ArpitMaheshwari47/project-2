@@ -16,17 +16,20 @@ const internSchema = new mongoose.Schema({
             },
             trim:true
         },
+
     mobile:{
         type:Number,
         required:true,
         unique:true,
         trim:true
         },
+
     collegeId:{
        type:ObjectId,
        required:true,
        ref:"College"
         },
+        
     isDeleted: {type:Boolean,default:false}
 
 },{timestamps:true})
