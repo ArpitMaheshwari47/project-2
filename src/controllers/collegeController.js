@@ -1,142 +1,132 @@
-const mongoose = require('mongoose')
-const collegeModel = require("../model/collegeModel")
-const internModel = require("../model/internModel")
+const collegeModel = require("../models/collegeModel");
+const internModel = require("../models/internModel");
+const axios = require("axios");
+
+const isValid = function (value) {                                  // Validataion for empty request body
+   if (Object.keys(value).length === 0) return false;
+   else return true;
+};
+
+const isValidValue = function (value) {                             // Validation for Strings/ Empty strings
+   if (typeof value !== "string") return false;
+   else if (value.trim().length == 0) return false;
+   else return true;
+};
 
 const createCollege = async function (req, res) {
    try {
-      // Edge cases
-      let data = req.body
+      let data = req.body;
+      if (!isValid(data))
+         return res
+            .status(400)
+            .send({ status: false, message: "No information pass" });
 
-      //this is for if user or student provide given an empty body
-      if (Object.keys(data).length == 0) {
-         return res.status(400).send({ status: false, msg: "Please provide the college details" })
-      };
-      if ((!data.fullName && !data.logoLink)) {
-         return res.status(400).send({ status: false, msg: "Please provide fullName and logolink" })
-      };
+      const { name, fullName, logoLink, isDeleted } = req.body;
 
-       if ((!data.name && !data.fullName)) {
-          return res.status(400).send({ status: false, msg: "Please provide name and fullName" })
-       };
-       if ((!data.name && !data.logoLink)) {
-          return res.status(400).send({ status: false, msg: "Please provide name and logolink"})
-       };
-      //particular each required feild is mandetory
-      if (!data.name) {
-         return res.status(400).send({ status: false, msg: "Name is required" })
-      };
-      if (!data.fullName) {
-         return res.status(400).send({ status: false, msg: "FullName is required" })
-      };
-      if (!data.logoLink) {
-         return res.status(400).send({ status: false, msg: "logoLink is required" })
-      };
-  
-      //checking name and fullname in alphabet only
+      if (!name)
+         return res
+            .status(400)
+            .send({ status: false, message: "Name is required" });
+      if (!isValidValue(name) || /\d/.test(name))
+         return res
+            .status(400)
+            .send({ status: false, message: "Name is in wrong format" });
 
-      if (!(/^\s*([a-zA-Z])([^0-9]){2,64}\s*$/.test(data.name))) {
-         return res.status(400).send({ status: false, msg: "Name should be in alphabat type" })
-      };
+      if (!fullName)
+         return res
+            .status(400)
+            .send({ status: false, message: "Full Name is required" });
+      if (!isValidValue(fullName) || /\d/.test(fullName))
+         return res
+            .status(400)
+            .send({ status: false, message: "Full Name is in wrong format" });
 
-      if (!(/^\s*([a-zA-Z])([^0-9]){2,64}\s*$/.test(data.fullName))) {
-         return res.status(400).send({ status: false, msg: "fullname should be in alphabat type" })
-      };
+      if (!logoLink)
+         return res
+            .status(400)
+            .send({ status: false, message: "Logo link is required" });
+      if (!isValidValue(logoLink))
+         return res
+            .status(400)
+            .send({ status: false, message: "Logo link is in wrong format" });
 
-      //checking logo format
+      if (isDeleted && typeof isDeleted !== "boolean")
+         return res
+            .status(400)
+            .send({ status: false, message: "isDeleted is in wrong format" });
 
-      if (!(/^https?:\/\/(.+\/)+.+(\.(gif|png|jpg|jpeg|webp|svg|psd|bmp|tif|jfif))$/i.test(data.logoLink))) {
-         return res.status(400).send({ status: false, msg: "Logolink is not in correct format" })
-      };
+      let found = false;                                                              // Using axios to check for correct Logolink with content type image
+      await axios
+         .get(logoLink)
+         .then((response) => {
+            if (response.status == 200 || response.status == 201) {
+               if (response.headers["content-type"].startsWith("image/")) found = true;
+            }
+         })
+         .catch((error) => { });
 
-      //checking college fullname is already registerd or not
-      let isValidfullName = await collegeModel.findOne({ fullName: data.fullName });
-      if (isValidfullName) {
-         return res.status(400).send({ status: false, message: "College fullName is already registered", })
-      };
+      if (found == false)
+         return res
+            .status(400)
+            .send({ status: false, message: "Incorrect logo link" });
 
-      //checking the name is unique or not
-      let nameCheck = await collegeModel.findOne({ name: data.name });
-      if (!nameCheck) {
-         let college = await collegeModel.create(data)
-         return res.status(201).send({ 
-            status: true,
-             data: {
-               name:college.name,
-               fullName:college.fullName,
-               logoLink:college.logoLink,
-               isDeleted:college.isDeleted
-             }});
-      }
-      else {
-         return res.status(400).send({ status: false, msg: "Name should be unique" });
-      }
+      let collegeName = await collegeModel.findOne({ name: req.body.name });
+      if (collegeName)
+         return res
+            .status(400)
+            .send({ status: false, message: "College Name is already exist" });
+
+      let college = await collegeModel.create(data);
+      return res.status(201).send({ status: true, data: college });
    } catch (err) {
-      console.log("This is the error :", err.message);
-      return res.status(500).send({ msg: "Error", error: err.message });
+      return res.status(500).send({ status: false, message: err.message });
    }
-
 };
-
 
 const getCollegeDetails = async function (req, res) {
-   res.setHeader('Access-Control-Allow-Origin','*')
-
    try {
-      
-      let data = req.query
-      //edge cases
-      //this is college name is empty or not
+      const collegeName = req.query.collegeName;
 
-      if (Object.keys(data).length == 0) {
-         return res.status(400).send({ status: false, msg: "Please provide the college name" })
+      if (!isValidValue(collegeName))
+         return res
+            .status(400)
+            .send({ status: false, message: "college name is required" });
+
+      const college = await collegeModel.findOne({
+         name: collegeName,
+         isDeleted: false,
+      });
+      if (!college)
+         return res
+            .status(400)
+            .send({ status: false, message: "No college found" });
+
+      const collegeDetails = {                                               // Copying name, fullName & logoLink from college to a new object collegeDetails
+         name: college.name,
+         fullName: college.fullName,
+         logoLink: college.logoLink,
       };
 
-      //checking college name in alphabet only
+      const getCollegeId = college._id;                                      // Extracting _id from college & using it to get interns
+      const internData = await internModel
+         .find({ collegeId: getCollegeId, isDeleted: false })
+         .select({ name: 1, mobile: 1, email: 1 });
 
-      if (!(/^\s*([a-zA-Z])([^0-9]){2,64}\s*$/.test(data.collegeName))) {
-         return res.status(400).send({ status: false, msg: "Name should be in alphabat type" })
-      };
-      //checking lowercase and upercase 
+      if (internData.length == 0)
+         return res
+            .status(400)
+            .send({ status: false, message: "No interns for this college" });
+      const data = { ...collegeDetails, interns: internData };
 
-      // checking college is valid or not
-
-      const getCollegeDetail = await collegeModel.findOne({ name: data.collegeName })
-      // console.log(getCollegeDetail)
-      if (!getCollegeDetail) {
-         return res.status(404).send({ status: false, message: " please provide correct college name" })
-      };
-
-      const collegeId = getCollegeDetail._id
-
-      // console.log(collegeId)
-
-      const findIntern = await internModel.find({ collegeId: collegeId, isDeleted: false }).select({ name: 1, email: 1, mobile: 1 })
-
-      // console.log(findIntern)
-
-      //checking any intern is present or not
-      if (findIntern.length == 0) {
-         return res.status(404).send({ status: false, message: "No intern enrolled with this college" })
-      };
-
-
-      let finalData = {
-         name: getCollegeDetail.name,
-         fullName: getCollegeDetail.fullName,
-         logoLink: getCollegeDetail.logoLink,
-         interns: findIntern
-      }
-
-      return res.status(200).send({ status: true, data: finalData })
-
-   } catch (err) {
-      console.log("This is the error :", err.message);
-      return res.status(500).send({ msg: "Error", error: err.message });
+      return res.status(200).send({ status: true, data: data });
+   } catch (error) {
+      return res.status(500).send({ status: false, message: err.message });
    }
 };
 
-module.exports.createCollege = createCollege
-module.exports.getCollegeDetails = getCollegeDetails
-
-
-
+module.exports = {
+   createCollege,
+   getCollegeDetails,
+   isValid,
+   isValidValue
+};

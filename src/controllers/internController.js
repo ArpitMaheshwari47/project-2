@@ -1,89 +1,95 @@
-const mongoose = require('mongoose')
-const collegeModel = require("../model/collegeModel")
-const internModel = require("../model/internModel")
+const internModel = require("../models/internModel");
+const collegeModel = require("../models/collegeModel");
+const {isValid, isValidValue} = require("../controllers/collegeController")
 
 const createIntern = async function (req, res) {
-    try {
-        let data = req.body
+  try {
+    let data = req.body;
+    const { name, email, mobile, collegeName, isDeleted } = req.body;
 
-        // Edge cases
-        //if user or student given a empty body
-        if (Object.keys(data).length == 0) {
-            return res.status(400).send({ status: false, msg: "Please provide the college details" })
-        };
-        //each required field is mandetory
-        if (!data.name) {
-            return res.status(400).send({ status: false, msg: "Name is required" })
-        };
-        if (!data.email) {
-            return res.status(400).send({ status: false, msg: "Email is required" })
-        };
-        if (!data.mobile) {
-            return res.status(400).send({ status: false, msg: "Mobile is required" })
-        };
-        if (!data.collegeName) {
-            return res.status(400).send({ status: false, msg: "collegeName is required" })
-        };
+    if (!isValid(data))
+      return res
+        .status(400)
+        .send({ status: false, message: "No information pass" });
+    if (!name)
+      return res
+        .status(400)
+        .send({ status: false, message: "Name is required" });
+    if (!isValidValue(name) || (/\d/.test(name)) )
+      return res
+        .status(400)
+        .send({ status: false, message: "Name is in wrong format" });
 
-        // checking name in alphbet only
+    if (!email)
+      return res
+        .status(400)
+        .send({ status: false, message: "email is required" });
+    if (!isValidValue(email))
+      return res
+        .status(400)
+        .send({ status: false, message: "email is in wrong format" });
+    if (!email.match(/\S+@\S+\.\S+/))
+      return res
+        .status(400)
+        .send({ status: false, message: "Email is invalid" });
 
-        if (!(/^\s*([a-zA-Z])([^0-9]){2,64}\s*$/.test(data.name))) {
-            return res.status(400).send({ status: false, msg: "Name should be alphabat type" })
-        };
+    if (!mobile)
+      return res
+        .status(400)
+        .send({ status: false, message: "mobile is required" });
+    if (!isValidValue(mobile))
+      return res
+        .status(400)
+        .send({ status: false, message: "mobile is in wrong format" });
 
-        // checking email is in right format or not and also the email is unique or not
+    if (!mobile.match(/^\d{10}$/))
+      return res
+        .status(400)
+        .send({ status: false, message: "mobile is invalid" });
 
-        if (!(/^\w+([\.-]?\w+)@\w+([\.-]?\w+)(\.\w{2,3})+$/.test(data.email))) {
-            return res.status(400).send({ status: false, msg: "please Enter Valid Email" })
-        };
+    let internEmail = await internModel.findOne({
+      $or: [{ email: email }, { mobile: mobile }],
+    });
 
-        const isEmailPresent = await internModel.findOne({ email: data.email })
+    if (internEmail)
+      return res.status(400).send({
+        status: false,
+        message: "Email or Mobile number already in use.",
+      });
 
-        if (isEmailPresent) {
-            return res.status(400).send({ status: false, msg: "EmailId Is Already Exist In DB" })
-        };
+    if (!collegeName)
+      return res
+        .status(400)
+        .send({ status: false, message: "collegeName is required" });
+    if (!isValidValue(collegeName))
+      return res
+        .status(400)
+        .send({ status: false, message: "collegeName is in wrong format" });
 
+    if (isDeleted && typeof isDeleted !== "boolean")
+      return res
+        .status(400)
+        .send({ status: false, message: "isDeleted is in wrong format" });
 
-        //checking mobile is in right format or not and also the mobile is present or not in our database
+    let college = await collegeModel
+      .findOne({
+        $or: [{ name: collegeName }, { fullName: collegeName }],
+        isDeleted: false,
+      })
+      .select({ _id: 1 });
 
-        if (!(/^(?:(?:\+|0{0,2})91(\s*|[\-])?|[0]?)?([6789]\d{2}([ -]?)\d{3}([ -]?)\d{4})$/.test(data.mobile))) {
+    if (!college)
+      return res
+        .status(400)
+        .send({ status: false, message: "college not exists" });
+    delete data.collegeName;
+    data.collegeId = college._id;
 
-            return res.status(400).send({ status: false, msg: "Mobile is not valid" })
-        };
-
-        const isMobilePresent = await internModel.findOne({ mobile: data.mobile })
-
-        if (isMobilePresent) {
-            return res.status(400).send({ status: false, msg: "Mobile is already register" })
-        };
-
-        let collegeCheck = await collegeModel.findOne({ name: data.collegeName })
-        if (!collegeCheck) {
-
-            return res.status(400).send({ status: false, msg: "CollegeName was not found" })
-        }
-       
-        let intyern = {
-            name:req.body.name,
-            email:req.body.email,
-            mobile:req.body.mobile,
-            collegeId:collegeCheck._id
-        }
-
-            let collegeintern = await internModel.create(intyern)
-            console.log(collegeintern)
-            return res.status(201).send({ 
-                status: true,
-                 data: intyern})
-                 
-        
-    } catch (err) {
-        console.log("This is the error :", err.message);
-        return res.status(500).send({ msg: "Error", error: err.message });
-    }
-
+    let intern = await internModel.create(data);
+    return res.status(201).send({ status: true, data: intern });
+  } catch (err) {
+    return res.status(500).send({ status: false, message: err.message });
+  }
 };
 
-
-module.exports.createIntern = createIntern
-
+module.exports.createIntern = createIntern;
